@@ -13,6 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
 
+// Middleware
 app.use(express.json());
 app.use(cors());
 
@@ -28,18 +29,13 @@ const connectDB = async () => {
 };
 connectDB();
 
-// ========================
-//         ROUTES
-// ========================
+// =============== ROUTES =================
 
-// 🔐 Register
+// 🔐 Register route
 app.post("/register", async (req, res) => {
-  console.log("📩 Register request:", req.body);
-
   try {
     const { name, email, password } = req.body;
 
-    // Basic validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
@@ -60,20 +56,17 @@ app.post("/register", async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error("Register error:", err.message);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// 🔑 Login
+// 🔑 Login route
 app.post("/login", async (req, res) => {
-  console.log("🔐 Login request:", req.body);
-
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+      return res.status(400).json({ message: "Email and password required" });
     }
 
     const user = await User.findOne({ email });
@@ -94,28 +87,17 @@ app.post("/login", async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error("Login error:", err.message);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// 👤 Get profile (protected)
+// 👤 Profile route (protected)
 app.get("/profile", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
     res.json(user);
   } catch (err) {
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// 🧾 Create user
-app.post("/users", async (req, res) => {
-  try {
-    const user = await User.create(req.body);
-    res.status(201).json(user);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -125,7 +107,17 @@ app.get("/users", async (req, res) => {
     const users = await User.find().select("-password");
     res.status(200).json(users);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// 🧾 Create user
+app.post("/users", async (req, res) => {
+  try {
+    const user = await User.create(req.body);
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -136,10 +128,9 @@ app.patch("/users/:id", async (req, res) => {
       new: true,
     });
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
-
     res.status(200).json(updatedUser);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -148,14 +139,13 @@ app.delete("/users/:id", async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.params.id);
     if (!deletedUser) return res.status(404).json({ message: "User not found" });
-
     res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// 🔊 Start server
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
