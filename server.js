@@ -62,21 +62,27 @@ app.post("/register", async (req, res) => {
 
 // 🔑 Login route
 app.post("/login", async (req, res) => {
+  console.log("🔐 Login request:", req.body);
+
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
+      return res.status(400).json({ message: "Email and password are required" });
     }
 
     const user = await User.findOne({ email });
+    console.log("User found:", user); // 👈 Add this
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log("Password match:", isMatch); // 👈 Add this
+
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid user" });
     }
 
     const token = jwt.sign({ userId: user._id }, SECRET_KEY, { expiresIn: "1h" });
@@ -87,7 +93,8 @@ app.post("/login", async (req, res) => {
       token,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error("Login error:", err.message);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
