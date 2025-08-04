@@ -13,25 +13,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
 
-// Middleware
+
 app.use(express.json());
 app.use(cors());
 
-// MongoDB connection
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected");
+    console.log("MongoDB connected");
   } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
+    console.error("MongoDB connection failed:", err.message);
     process.exit(1);
   }
 };
 connectDB();
 
-// =============== ROUTES =================
 
-// 🔐 Register route
+
+// Register 
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -60,9 +60,9 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// 🔑 Login route
+//Login 
 app.post("/login", async (req, res) => {
-  console.log("🔐 Login request:", req.body);
+  console.log("Login request:", req.body);
 
   try {
     const { email, password } = req.body;
@@ -72,14 +72,14 @@ app.post("/login", async (req, res) => {
     }
 
     const user = await User.findOne({ email });
-    console.log("User found:", user); // 👈 Add this
+    console.log("User found:", user); 
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log("Password match:", isMatch); // 👈 Add this
+    console.log("Password match:", isMatch); 
 
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid user" });
@@ -98,7 +98,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// 👤 Profile route (protected)
+// profile
 app.get("/profile", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
@@ -108,7 +108,7 @@ app.get("/profile", auth, async (req, res) => {
   }
 });
 
-// 📋 Get all users
+// Get all users
 app.get("/users", async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -118,7 +118,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// 🧾 Create user
+// Create user
 app.post("/users", async (req, res) => {
   try {
     const user = await User.create(req.body);
@@ -128,7 +128,7 @@ app.post("/users", async (req, res) => {
   }
 });
 
-// ✏️ Update user
+//Update user
 app.patch("/users/:id", async (req, res) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
@@ -141,7 +141,7 @@ app.patch("/users/:id", async (req, res) => {
   }
 });
 
-// 🗑️ Delete user
+//Delete user
 app.delete("/users/:id", async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.params.id);
@@ -152,7 +152,7 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
-// Start server
+
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(` Server running on port ${PORT}`);
 });
