@@ -171,7 +171,7 @@ app.post("/admin/login", async (req, res) => {
   const { email, password } = req.body;
 
   // Hardcoded admin credentials
-  if (email === "admin@demo.com" && password === "admin123") {
+  if (email === "pankajsir@gmail.com" && password === "sir123") {
     const token = jwt.sign(
       { userId: "admin", role: "admin" },
       SECRET_KEY,
