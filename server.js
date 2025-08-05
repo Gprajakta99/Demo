@@ -165,6 +165,25 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
+// Add this below the regular user login route
+// Or near the top if you want
+app.post("/admin/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  // Hardcoded admin credentials
+  if (email === "admin@demo.com" && password === "admin123") {
+    const token = jwt.sign(
+      { userId: "admin", role: "admin" },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    res.json({ token });
+  } else {
+    res.status(401).json({ message: "Invalid admin credentials" });
+  }
+});
+
+
 
 
 // Create Task (user only)
