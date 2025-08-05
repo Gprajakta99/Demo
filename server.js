@@ -5,11 +5,9 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "./model/user.js";
-import auth from "./middelware/auth.js";
 import Task from "./model/task.js";
-import isAdmin from "./middelware/isAdmin.js"; //import admin middleware
-// import Task from ""; // if not already
-
+import auth from "./middelware/auth.js";
+import isAdmin from "./middelware/isAdmin.js";
 
 dotenv.config();
 
@@ -32,10 +30,12 @@ const connectDB = async () => {
 };
 connectDB();
 
+
+
 // Register
 app.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
@@ -46,12 +46,13 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // 🔁 Let mongoose handle hashing (no bcrypt here)
-    const user = await User.create({ name, email, password });
+    const user = await User.create({ name, email, password, role });
 
-    const token = jwt.sign({ userId: user._id }, SECRET_KEY, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
 
     res.status(201).json({
       message: "Registration successful",
@@ -69,6 +70,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
+// Login
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -87,9 +89,11 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid password" });
     }
 
-    const token = jwt.sign({ userId: user._id }, SECRET_KEY, {
-      expiresIn: "1h",
-    });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
 
     res.status(200).json({
       message: "Login successful",
@@ -107,7 +111,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-//  Protected profile route
+// Profile (protected)
 app.get("/profile", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
@@ -117,7 +121,8 @@ app.get("/profile", auth, async (req, res) => {
   }
 });
 
-//  Optional CRUD Routes for All Users
+
+// Get all users 
 app.get("/users", async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -162,7 +167,7 @@ app.delete("/users/:id", async (req, res) => {
 
 
 
-
+// Create Task (user only)
 app.post("/tasks", auth, async (req, res) => {
   try {
     const { title, description, lastDate, status } = req.body;
@@ -188,32 +193,47 @@ app.post("/tasks", auth, async (req, res) => {
   }
 });
 
-
-
-//  Admin: Get all tasks
+// Get all tasks (admin only)
 app.get("/tasks", auth, isAdmin, async (req, res) => {
-  const tasks = await Task.find().populate("userId", "name email");
-  res.status(200).json(tasks);
+  try {
+    const tasks = await Task.find().populate("userId", "name email");
+    res.status(200).json(tasks);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-//  User: Get their tasks
+// Get user’s own tasks
 app.get("/mytasks", auth, async (req, res) => {
-  const tasks = await Task.find({ userId: req.user.userId });
-  res.status(200).json(tasks);
+  try {
+    const tasks = await Task.find({ userId: req.user.userId });
+    res.status(200).json(tasks);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-//  Admin: Update a task
+// Update task (admin only)
 app.put("/tasks/:id", auth, isAdmin, async (req, res) => {
-  const updated = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  res.status(200).json(updated);
+  try {
+    const updated = await Task.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.status(200).json(updated);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-//  Admin: Delete a task
+// Delete task (admin only)
 app.delete("/tasks/:id", auth, isAdmin, async (req, res) => {
-  await Task.findByIdAndDelete(req.params.id);
-  res.status(200).json({ message: "Deleted successfully" });
-});
-
+  try {
+    await Task.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "Deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+})
 
 
 app.listen(PORT, () => {
