@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import cors from "cors";  
+import cors from "cors";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "./model/user.js";
@@ -22,13 +22,14 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB connected");
+    console.log(" MongoDB connected");
   } catch (err) {
-    console.error("MongoDB connection failed:", err.message);
+    console.error(" MongoDB connection failed:", err.message);
     process.exit(1);
   }
 };
 connectDB();
+
 
 
 // Register
@@ -120,6 +121,7 @@ app.get("/profile", auth, async (req, res) => {
   }
 });
 
+
 // Get all users 
 app.get("/users", async (req, res) => {
   try {
@@ -163,7 +165,8 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
-// Admin Login
+// Add this below the regular user login route
+// Or near the top if you want
 app.post("/admin/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -180,6 +183,10 @@ app.post("/admin/login", async (req, res) => {
   }
 });
 
+
+
+
+// Create Task (user only)
 app.post("/tasks", auth, async (req, res) => {
   try {
     const { title, description, lastDate, status } = req.body;
@@ -187,15 +194,10 @@ app.post("/tasks", auth, async (req, res) => {
     if (!title || !lastDate)
       return res.status(400).json({ message: "Title and lastDate are required" });
 
-    let email = "admin@demo.com";  
-    if (req.user.role !== "admin") {
-      const user = await User.findById(req.user.userId);
-      if (!user) return res.status(404).json({ message: "User not found" });
-      email = user.email;
-    }
+    const user = await User.findById(req.user.userId);
 
     const task = await Task.create({
-      email,
+      email: user.email,
       title,
       description,
       lastDate,
@@ -250,9 +252,9 @@ app.delete("/tasks/:id", auth, isAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
-});
+})
 
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(` Server running on port ${PORT}`);
 });
