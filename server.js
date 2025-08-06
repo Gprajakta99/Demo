@@ -22,15 +22,13 @@ app.use(express.json());
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
-    console.log(" MongoDB connected");
+    console.log("MongoDB connected");
   } catch (err) {
-    console.error(" MongoDB connection failed:", err.message);
+    console.error("MongoDB connection failed:", err.message);
     process.exit(1);
   }
 };
 connectDB();
-
-
 
 // Register
 app.post("/register", async (req, res) => {
@@ -49,7 +47,7 @@ app.post("/register", async (req, res) => {
     const user = await User.create({ name, email, password, role });
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, email: user.email },
       SECRET_KEY,
       { expiresIn: "1h" }
     );
@@ -90,7 +88,7 @@ app.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id, role: user.role, email: user.email },
       SECRET_KEY,
       { expiresIn: "1h" }
     );
@@ -111,7 +109,23 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Profile (protected)
+// Admin Login
+app.post("/admin/login", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (email === "pankajsir@gmail.com" && password === "sir123") {
+    const token = jwt.sign(
+      { userId: "admin", role: "admin", email },
+      SECRET_KEY,
+      { expiresIn: "1h" }
+    );
+    res.json({ token });
+  } else {
+    res.status(401).json({ message: "Invalid admin credentials" });
+  }
+});
+
+// Profile
 app.get("/profile", auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select("-password");
@@ -121,8 +135,7 @@ app.get("/profile", auth, async (req, res) => {
   }
 });
 
-
-// Get all users 
+// Get all users
 app.get("/users", async (req, res) => {
   try {
     const users = await User.find().select("-password");
@@ -132,6 +145,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
+// Create User (extra route)
 app.post("/users", async (req, res) => {
   try {
     const user = await User.create(req.body);
@@ -141,6 +155,7 @@ app.post("/users", async (req, res) => {
   }
 });
 
+// Update User
 app.patch("/users/:id", async (req, res) => {
   try {
     const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
@@ -154,6 +169,7 @@ app.patch("/users/:id", async (req, res) => {
   }
 });
 
+// Delete User
 app.delete("/users/:id", async (req, res) => {
   try {
     const deletedUser = await User.findByIdAndDelete(req.params.id);
@@ -165,50 +181,43 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
-// Add this below the regular user login route
-// Or near the top if you want
-app.post("/admin/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  // Hardcoded admin credentials
-  if (email === "pankajsir@gmail.com" && password === "sir123") {
-    const token = jwt.sign(
-      { userId: "admin", role: "admin" },
-      SECRET_KEY,
-      { expiresIn: "1h" }
-    );
-    res.json({ token });
-  } else {
-    res.status(401).json({ message: "Invalid admin credentials" });
-  }
-});
-
-
-
-
-// Create Task (user only)
+// ✅ Create Task (admin or user)
 app.post("/tasks", auth, async (req, res) => {
+  const { title, description, lastDate, status, email } = req.body;
+
   try {
-    const { title, description, lastDate, status } = req.body;
-
-    if (!title || !lastDate)
+    if (!title || !lastDate) {
       return res.status(400).json({ message: "Title and lastDate are required" });
+    }
 
-    const user = await User.findById(req.user.userId);
+    let assignedEmail = req.user.email;
+    let assignedUserId = req.user.userId;
 
-    const task = await Task.create({
-      email: user.email,
+    if (req.user.role === "admin" && email) {
+      const assignedUser = await User.findOne({ email });
+
+      if (!assignedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      assignedEmail = assignedUser.email;
+      assignedUserId = assignedUser._id;
+    }
+
+    const task = new Task({
       title,
       description,
       lastDate,
       status: status || "pending",
-      userId: req.user.userId,
+      email: assignedEmail,
+      userId: assignedUserId,
     });
 
+    await task.save();
     res.status(201).json(task);
-  } catch (err) {
-    console.error("Error creating task:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    console.error("Error creating task:", error);
+    res.status(500).json({ message: "Error creating task" });
   }
 });
 
@@ -222,7 +231,7 @@ app.get("/tasks", auth, isAdmin, async (req, res) => {
   }
 });
 
-// Get user’s own tasks
+// Get logged-in user's tasks
 app.get("/mytasks", auth, async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.user.userId });
@@ -232,7 +241,7 @@ app.get("/mytasks", auth, async (req, res) => {
   }
 });
 
-// Update task (admin only)
+// Update Task (admin only)
 app.put("/tasks/:id", auth, isAdmin, async (req, res) => {
   try {
     const updated = await Task.findByIdAndUpdate(req.params.id, req.body, {
@@ -244,7 +253,7 @@ app.put("/tasks/:id", auth, isAdmin, async (req, res) => {
   }
 });
 
-// Delete task (admin only)
+// Delete Task (admin only)
 app.delete("/tasks/:id", auth, isAdmin, async (req, res) => {
   try {
     await Task.findByIdAndDelete(req.params.id);
@@ -252,9 +261,8 @@ app.delete("/tasks/:id", auth, isAdmin, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
-})
-
+});
 
 app.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
