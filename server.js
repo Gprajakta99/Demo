@@ -233,8 +233,9 @@ app.get("/tasks", auth, isAdmin, async (req, res) => {
 
 // Get logged-in user's tasks
 app.get("/mytasks/:email", auth, async (req, res) => {
+  
   try {
-    const tasks = await Task.find({ email: req.user.email });
+    const tasks = await Task.find({ email: req.params.email });
     res.status(200).json(tasks);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
