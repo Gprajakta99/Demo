@@ -18,7 +18,7 @@ const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Connection
+// Connect MongoDB
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
@@ -30,7 +30,7 @@ const connectDB = async () => {
 };
 connectDB();
 
-// Register Route
+// Register
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -68,7 +68,7 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Login Route
+// Login
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -109,7 +109,7 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Admin Login Route
+// Admin Login
 app.post("/admin/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -145,7 +145,7 @@ app.get("/users", async (req, res) => {
   }
 });
 
-// Create User (optional)
+// Create User (extra route)
 app.post("/users", async (req, res) => {
   try {
     const user = await User.create(req.body);
@@ -181,25 +181,27 @@ app.delete("/users/:id", async (req, res) => {
   }
 });
 
-// Create Task (admin or user)
+//  Create Task (admin or user)
 app.post("/tasks", auth, async (req, res) => {
   const { title, description, lastDate, status, email } = req.body;
 
   try {
     if (!title || !lastDate) {
-      return res
-        .status(400)
-        .json({ message: "Title and lastDate are required" });
+      return res.status(400).json({ message: "Title and lastDate are required" });
     }
 
-    let userId = req.user.userId;
+    let assignedEmail = req.user.email;
+    let assignedUserId = req.user.userId;
 
     if (req.user.role === "admin" && email) {
-      const user = await User.findOne({ email });
-      if (!user) {
+      const assignedUser = await User.findOne({ email });
+
+      if (!assignedUser) {
         return res.status(404).json({ message: "User not found" });
       }
-      userId = user._id;
+
+      assignedEmail = assignedUser.email;
+      assignedUserId = assignedUser._id;
     }
 
     const task = new Task({
@@ -207,7 +209,8 @@ app.post("/tasks", auth, async (req, res) => {
       description,
       lastDate,
       status: status || "pending",
-      userId,
+      email: assignedEmail,
+      userId: assignedUserId,
     });
 
     await task.save();
