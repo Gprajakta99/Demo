@@ -231,17 +231,14 @@ app.get("/tasks", auth, isAdmin, async (req, res) => {
   }
 });
 
-// Get logged-in user's tasks
-app.get("/mytasks/:email", auth, async (req, res) => {
-  
+app.get("/mytasks", auth, async (req, res) => {
   try {
-    const tasks = await Task.find({ email: req.params.email });
-    res.status(200).json(tasks);
+    const tasks = await Task.find({ email: req.user.email });
+    res.status(200).json({ tasks });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 // Update Task (admin only)
 app.put("/tasks/:id", auth, isAdmin, async (req, res) => {
   try {
